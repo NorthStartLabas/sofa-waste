@@ -2,17 +2,19 @@ import { admin, APP_URL, cors, escapeHtml, json, sendMail } from '../_shared/com
 
 /**
  * Monday's email: last week's waste, per restaurant, to its report_emails.
- * Called by pg_cron with the CRON_SECRET header. Body may name one
- * restaurant_id and week_start to (re)send a specific week by hand.
+ * Called by pg_cron with the secret it keeps in Vault (see the
+ * weekly_report_cron migration). Body may name one restaurant_id and
+ * week_start to (re)send a specific week by hand.
  */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors })
-  const secret = Deno.env.get('CRON_SECRET')
-  if (!secret || req.headers.get('x-cron-secret') !== secret)
-    return json({ error: 'unauthorized' }, 401)
+  const db = admin()
+  const { data: ok } = await db.rpc('cron_secret_ok', {
+    p_secret: req.headers.get('x-cron-secret') ?? '',
+  })
+  if (ok !== true) return json({ error: 'unauthorized' }, 401)
 
   const body = await req.json().catch(() => ({}))
-  const db = admin()
   let q = db.from('restaurants').select('id, name, timezone, report_emails')
   if (typeof body.restaurant_id === 'string') q = q.eq('id', body.restaurant_id)
   const { data: restaurants, error } = await q

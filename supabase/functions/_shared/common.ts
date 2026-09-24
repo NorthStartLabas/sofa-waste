@@ -78,7 +78,10 @@ export async function sendMail(to: string[], subject: string, html: string): Pro
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: Deno.env.get('MAIL_FROM') ?? 'SOFA Verspilling <liviu@northstarlabs.nl>',
+      // Must be on the domain verified in Resend (updates.northstarlabs.nl);
+      // replies go to a real inbox.
+      from: Deno.env.get('MAIL_FROM') ?? 'SOFA Verspilling <liviu@updates.northstarlabs.nl>',
+      reply_to: Deno.env.get('MAIL_REPLY_TO') ?? 'liviu@northstarlabs.nl',
       to,
       subject,
       html,
