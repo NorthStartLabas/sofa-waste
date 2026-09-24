@@ -1,0 +1,139 @@
+@import 'tailwindcss';
+@import '@fontsource/eb-garamond/latin-500.css';
+@import '@fontsource/inter-tight/latin-400.css';
+@import '@fontsource/inter-tight/latin-500.css';
+@import '@fontsource/inter-tight/latin-600.css';
+
+/* ==========================================================================
+   SOFA tokens, from BRANDING.md (the website's "river & garden" palette).
+   Never write a raw colour in a component; use the token.
+   Checked against WCAG AA by `npm run check:contrast`.
+
+   Kitchen rules on top of the brand: nothing below 16px that someone has to
+   read to do their job, every target at least 48px, the log screen's at 64px.
+   ========================================================================== */
+
+@theme {
+  --color-paper: #f6f3ee;
+  --color-paper-raised: #fdfbf7;
+  --color-paper-sunk: #eae4da;
+  --color-ink: #1d1d1b;
+  --color-ink-muted: #5a6968;
+  --color-line: #d6cdbf;
+  --color-line-strong: #b9ac97;
+  --color-accent: #3e5140;
+  --color-accent-hover: #2b3529;
+  --color-accent-contrast: #f6f3ee;
+  --color-accent-soft: #e4e7de;
+  /* Clay. The brand keeps it for prices; here that means euros. */
+  --color-highlight: #96461f;
+  --color-deep: #2b3529;
+  --color-on-deep: #ede7da;
+  --color-on-deep-muted: #b4b9a8;
+  /* Not in the website palette: an app has errors to say. Brick, AA on paper. */
+  --color-danger: #9a2a1c;
+
+  --font-display: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+
+  --text-h1: clamp(2.25rem, 6.2vw, 3.5rem);
+  --text-h1--line-height: 1.04;
+  --text-h1--letter-spacing: -0.012em;
+  --text-h2: clamp(1.75rem, 3.8vw, 2.25rem);
+  --text-h2--line-height: 1.12;
+  --text-h2--letter-spacing: -0.008em;
+  --text-h3: clamp(1.25rem, 2vw, 1.5rem);
+  --text-h3--line-height: 1.25;
+
+  --spacing-gutter: clamp(1rem, 5vw, 3rem);
+}
+
+@layer base {
+  * {
+    min-width: 0;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-synthesis-weight: none;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-optical-sizing: auto;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background-color: var(--color-accent);
+    color: var(--color-accent-contrast);
+  }
+
+  /* Tabular figures wherever numbers line up: weights, euros, PINs. */
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* The website's section label: small tracked caps. Labels only, never
+   something a cook must read to act. */
+@utility eyebrow {
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+}
+
+@utility page-x {
+  padding-inline: var(--spacing-gutter);
+}
+
+/* The website's grain film, so large flat fields don't read as flat vector. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* A sheet rising from the bottom: the same gentle rise the website uses. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+.rise {
+  animation: rise 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}

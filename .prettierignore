@@ -1,0 +1,7 @@
+dist
+node_modules
+package-lock.json
+
+# Prose, not code. The formatter rewrites emphasis markers and rewraps
+# paragraphs, which buries the real diff the next time these are edited.
+*.md
