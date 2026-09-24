@@ -108,13 +108,14 @@ end $$;
 -- The chef reprices fish and edits the qty. The entry keeps its logged price.
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000c003","role":"authenticated"}', true);
 update public.items set pack_price = 60 where id = '00000000-0000-0000-0000-0000000001a2';
-update public.waste_entries set qty = 200, unit_cost = 99 where id = '00000000-0000-0000-0000-0000000003a1';
+update public.waste_entries set qty = 200, unit_cost = 99, logged_by = '00000000-0000-0000-0000-00000000c003' where id = '00000000-0000-0000-0000-0000000003a1';
 do $$
 declare
   e public.waste_entries;
 begin
   select * into e from public.waste_entries where id = '00000000-0000-0000-0000-0000000003a1';
   assert e.cost = 10, format('200 g at the logged 0.05/g should be 10.00, got %s', e.cost);
+  assert e.logged_by = '00000000-0000-0000-0000-00000000c001', 'chef reassigned an entry';
 end $$;
 
 -- Cook one can take an entry back within 10 minutes, not after.

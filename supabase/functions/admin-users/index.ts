@@ -11,8 +11,8 @@ import {
 } from '../_shared/common.ts'
 
 /**
- * Creating a person and resetting a PIN, the two things that need the auth
- * admin API. Name, role and active are plain updates on `members` under RLS.
+ * Creating a person, resetting a PIN and deleting a person: the things that
+ * need the auth admin API. Name, role and active are plain updates on `members` under RLS.
  *
  * Both reply with the PIN itself when it could not be emailed (no Resend key
  * yet, or Resend refused), so an admin can hand it over in person. It is a
@@ -142,6 +142,32 @@ Deno.serve(async (req) => {
       pinMail(member.name, pin, restaurant.name),
     )
     return json(emailed ? { ok: true, emailed } : { ok: true, emailed, pin })
+  }
+
+  if (body.action === 'delete') {
+    const target = typeof body.user_id === 'string' ? body.user_id : ''
+    if (target === userId) return json({ error: 'self' }, 400)
+    const { data: member } = await db
+      .from('members')
+      .select('user_id')
+      .eq('restaurant_id', restaurantId)
+      .eq('user_id', target)
+      .maybeSingle()
+    if (!member) return json({ error: 'invalid' }, 400)
+
+    // Someone who also works at another restaurant keeps their login there;
+    // only this membership goes. Otherwise the login goes too, which frees the
+    // email to be added again. Their entries stay, under the name they had.
+    const { count } = await db
+      .from('members')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('user_id', target)
+    const { error } =
+      (count ?? 0) > 1
+        ? await db.from('members').delete().eq('restaurant_id', restaurantId).eq('user_id', target)
+        : await db.auth.admin.deleteUser(target)
+    if (error) return json({ error: 'server' }, 500)
+    return json({ ok: true })
   }
 
   return json({ error: 'invalid' }, 400)

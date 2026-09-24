@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useMember } from '../auth/authContext'
 import { ScreenTitle } from '../components/Shell'
-import { chip, column, input, primaryButton, secondaryButton } from '../components/styles'
+import {
+  chip,
+  column,
+  dangerButton,
+  input,
+  primaryButton,
+  secondaryButton,
+} from '../components/styles'
 import { fetchMembers, updateMember } from '../data/api'
 import { errorMessage } from '../lib/errors'
 import { useT } from '../lib/i18n'
@@ -76,6 +83,21 @@ export function Users() {
         error?: string
       }>('admin-users', { action: 'reset', restaurant_id: restaurant.id, user_id: m.user_id })
       setNotice(pinNotice(m.email, data, status))
+      await load()
+    } catch (e) {
+      setNotice(errorMessage(e))
+    }
+  }
+
+  async function remove(m: Member) {
+    if (!window.confirm(t('confirmDeleteUser', { name: m.name }))) return
+    try {
+      const { status } = await callFunction('admin-users', {
+        action: 'delete',
+        restaurant_id: restaurant.id,
+        user_id: m.user_id,
+      })
+      setNotice(status === 200 ? t('userDeleted', { name: m.name }) : t('errorGeneric'))
       await load()
     } catch (e) {
       setNotice(errorMessage(e))
@@ -170,7 +192,10 @@ export function Users() {
                   className={secondaryButton}
                   onClick={() => void patch(m, { active: !m.active })}
                 >
-                  {m.active ? t('inactive') : t('active')}
+                  {m.active ? t('deactivate') : t('activate')}
+                </button>
+                <button type="button" className={dangerButton} onClick={() => void remove(m)}>
+                  {t('delete')}
                 </button>
               </div>
             )}

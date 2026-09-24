@@ -78,13 +78,22 @@ export async function sendMail(to: string[], subject: string, html: string): Pro
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      // Must be on the domain verified in Resend (updates.northstarlabs.nl);
-      // replies go to a real inbox.
-      from: Deno.env.get('MAIL_FROM') ?? 'SOFA Verspilling <liviu@updates.northstarlabs.nl>',
+      // Must be on the domain verified in Resend (updates.northstarlabs.nl).
+      // Not "liviu@": mail from liviu@ to liviu@ via an unknown server is what
+      // Microsoft 365 treats as impersonation and quarantines. Replies still
+      // reach a real inbox.
+      from: Deno.env.get('MAIL_FROM') ?? 'SOFA Verspilling <verspilling@updates.northstarlabs.nl>',
       reply_to: Deno.env.get('MAIL_REPLY_TO') ?? 'liviu@northstarlabs.nl',
       to,
       subject,
       html,
+      // HTML-only mail scores worse with spam filters.
+      text: html
+        .replace(/<(br|\/p|\/tr|hr)[^>]*>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+        .replace(/\n\s*\n+/g, '\n\n')
+        .trim(),
     }),
   })
   if (!res.ok) console.error('resend', res.status, await res.text())
