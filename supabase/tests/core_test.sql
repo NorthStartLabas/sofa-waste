@@ -9,6 +9,9 @@ insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000c002', 'cook2@test.local'),
   ('00000000-0000-0000-0000-00000000c003', 'chef@test.local');
 insert into public.restaurants (id, name) values ('00000000-0000-0000-0000-0000000000a1', 'Test');
+insert into public.locations (id, restaurant_id, name) values
+  ('00000000-0000-0000-0000-0000000006a1', '00000000-0000-0000-0000-0000000000a1', 'Koelcel'),
+  ('00000000-0000-0000-0000-0000000006a2', '00000000-0000-0000-0000-0000000000a1', 'Droog');
 insert into public.members (restaurant_id, user_id, name, email, role) values
   ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000c001', 'Cook One', 'cook1@test.local', 'cook'),
   ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000c002', 'Cook Two', 'cook2@test.local', 'cook'),
@@ -17,13 +20,13 @@ insert into public.members (restaurant_id, user_id, name, email, role) values
 -- cream: box of 6 x 1 L at 15 euro -> 2.50/L
 -- fish: 30 euro/kg, 60% yield when cleaned
 -- butter 250 g at 3 euro, bloemkool 1.20 a head, anise 100 g at 8 euro
-insert into public.items (id, restaurant_id, kind, name, unit, pack_qty, pack_price, yield_pct) values
-  ('00000000-0000-0000-0000-0000000001a1', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Room', 'ml', 6000, 15, null),
-  ('00000000-0000-0000-0000-0000000001a2', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Dagvis', 'g', 1000, 30, 60),
-  ('00000000-0000-0000-0000-0000000001a3', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Boter', 'g', 250, 3, null),
-  ('00000000-0000-0000-0000-0000000001a4', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Bloemkool', 'pcs', 1, 1.20, null),
-  ('00000000-0000-0000-0000-0000000001a5', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Anijs', 'g', 100, 8, null),
-  ('00000000-0000-0000-0000-0000000001a6', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Olie zonder prijs', 'ml', 1000, null, null);
+insert into public.items (id, restaurant_id, kind, name, unit, pack_qty, pack_price, yield_pct, location_id) values
+  ('00000000-0000-0000-0000-0000000001a1', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Room', 'ml', 6000, 15, null, '00000000-0000-0000-0000-0000000006a1'),
+  ('00000000-0000-0000-0000-0000000001a2', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Dagvis', 'g', 1000, 30, 60, '00000000-0000-0000-0000-0000000006a1'),
+  ('00000000-0000-0000-0000-0000000001a3', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Boter', 'g', 250, 3, null, '00000000-0000-0000-0000-0000000006a1'),
+  ('00000000-0000-0000-0000-0000000001a4', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Bloemkool', 'pcs', 1, 1.20, null, '00000000-0000-0000-0000-0000000006a1'),
+  ('00000000-0000-0000-0000-0000000001a5', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Anijs', 'g', 100, 8, null, '00000000-0000-0000-0000-0000000006a1'),
+  ('00000000-0000-0000-0000-0000000001a6', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Olie zonder prijs', 'ml', 1000, null, null, '00000000-0000-0000-0000-0000000006a1');
 insert into public.items (id, restaurant_id, kind, name, unit, batch_qty) values
   -- anijsboter: 300 g butter (3.60) + 80 g anise (6.40) = 10.00 for 350 g
   ('00000000-0000-0000-0000-0000000002a1', '00000000-0000-0000-0000-0000000000a1', 'prep', 'Anijsboter', 'g', 350),
@@ -53,6 +56,32 @@ begin
   assert round(c * 1000, 4) = round(4.80 + 100 * 10 / 350.0, 4), format('roosjes batch: %s', c * 1000);
   assert public.item_unit_cost('00000000-0000-0000-0000-0000000001a6') is null, 'missing price must be null';
   assert public.item_unit_cost('00000000-0000-0000-0000-0000000002a3') is null, 'missing batch weight must be null';
+end $$;
+
+-- Route fields: a raw product needs a location and joins the end of its
+-- route; a component needs neither.
+do $$
+declare
+  orders integer[];
+begin
+  select array_agg(sort_order order by id) into orders from public.items
+  where location_id = '00000000-0000-0000-0000-0000000006a1';
+  assert orders = array[0, 1, 2, 3, 4, 5], format('route order %s', orders);
+
+  begin
+    insert into public.items (restaurant_id, kind, name, unit)
+    values ('00000000-0000-0000-0000-0000000000a1', 'raw', 'Zonder locatie', 'g');
+    raise exception 'raw product without a location was accepted';
+  exception when check_violation then null;
+  end;
+
+  update public.items set location_id = '00000000-0000-0000-0000-0000000006a2'
+  where id = '00000000-0000-0000-0000-0000000001a1';
+  update public.items set location_id = '00000000-0000-0000-0000-0000000006a2'
+  where id = '00000000-0000-0000-0000-0000000001a2';
+  select array_agg(sort_order order by id) into orders from public.items
+  where location_id = '00000000-0000-0000-0000-0000000006a2';
+  assert orders = array[0, 1], format('moved products should queue up in the new location: %s', orders);
 end $$;
 
 -- A component can never contain itself.

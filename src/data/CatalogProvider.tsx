@@ -3,7 +3,7 @@ import { errorMessage } from '../lib/errors'
 import { fetchCatalog, type Catalog } from './api'
 import { CatalogContext } from './catalogContext'
 
-const empty: Catalog = { items: [], stations: [], suppliers: [], recipeLines: [] }
+const empty: Catalog = { items: [], stations: [], suppliers: [], locations: [], recipeLines: [] }
 
 /**
  * One fetch of the whole catalog, shared by the log screen and the editors.

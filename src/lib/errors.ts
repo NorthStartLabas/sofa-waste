@@ -13,6 +13,8 @@ export function errorMessage(e: unknown): string {
   const known: [RegExp, Key][] = [
     [/recipe_cycle/, 'recipeCycle'],
     [/violates foreign key constraint.*recipe_lines/i, 'inUse'],
+    [/violates foreign key constraint.*items_location_id_fkey/i, 'locationInUse'],
+    [/items_raw_has_location/, 'locationRequired'],
     [/failed to fetch|load failed|network/i, 'errorNetwork'],
   ]
   for (const [re, key] of known) if (re.test(message)) return t(key)

@@ -32,6 +32,8 @@ export type Member = {
 
 export type Station = { id: string; restaurant_id: string; name: string; sort_order: number }
 export type Supplier = { id: string; restaurant_id: string; name: string }
+/** A place on the walking route. Shared with the order app, which orders them. */
+export type Location = { id: string; restaurant_id: string; name: string; sort_order: number }
 
 export type Item = {
   id: string
@@ -46,6 +48,14 @@ export type Item = {
   yield_pct: number | null
   batch_qty: number | null
   archived: boolean
+  /** raw: where it lives on the walking route. Required for raw, as in the order app. */
+  location_id: string | null
+  /** raw: what you order in (Doos, Fles). The order app calls this `unit`. */
+  order_unit: string | null
+  /** Position within the location. Set by the database, reordered by the order app. */
+  sort_order: number
+  /** Bare uuid folder in the public ingredient-photos bucket, holding full + thumb. */
+  photo_path: string | null
   /** From items_with_cost. Null = incomplete. */
   unit_cost: number | null
   cleaned_unit_cost: number | null

@@ -1,7 +1,7 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useMember } from '../../auth/authContext'
-import { ArrowLeftIcon, TrashIcon, XIcon } from '@phosphor-icons/react'
+import { ArrowLeftIcon, CameraPlusIcon, TrashIcon, XIcon } from '@phosphor-icons/react'
 import { SkeletonRows } from '../../components/States'
 import {
   chip,
@@ -15,7 +15,16 @@ import {
   secondaryButton,
   select,
 } from '../../components/styles'
-import { deleteItem, saveItem, saveRecipe, setArchived } from '../../data/api'
+import {
+  deleteItem,
+  deleteProductPhoto,
+  productPhotoUrl,
+  saveItem,
+  saveRecipe,
+  setArchived,
+  uploadProductPhoto,
+} from '../../data/api'
+import { preparePhoto, type PreparedPhoto } from '../../lib/imagePhoto'
 import { useCatalog } from '../../data/catalogContext'
 import { errorMessage } from '../../lib/errors'
 import { perBigUnit } from '../../lib/format'
@@ -62,6 +71,18 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
   const [unit, setUnit] = useState<Unit>(existing?.unit ?? 'g')
   const [stationId, setStationId] = useState(existing?.station_id ?? null)
   const [supplierId, setSupplierId] = useState(existing?.supplier_id ?? '')
+  const [locationId, setLocationId] = useState(existing?.location_id ?? '')
+  const [locationMissing, setLocationMissing] = useState(false)
+  const [orderUnit, setOrderUnit] = useState(existing?.order_unit ?? '')
+  // A new photo waiting to be uploaded on save, or "removed" to clear the old one.
+  const [photo, setPhoto] = useState<PreparedPhoto | null>(null)
+  const [photoRemoved, setPhotoRemoved] = useState(false)
+  const [preview, setPreview] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview])
+  const shownPhoto =
+    preview ??
+    (existing?.photo_path && !photoRemoved ? productPhotoUrl(existing.photo_path, 'full') : null)
   // Shown in the big unit when the stored value is a round number of them.
   const startBig = (q: number | null | undefined, u: Unit) =>
     !!BIG[u] && q != null && q >= 1000 && q % 100 === 0
@@ -108,9 +129,14 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
 
   async function save() {
     if (!name.trim()) return setError(t('name'))
+    if (kind === 'raw' && !locationId) return setLocationMissing(true)
     setBusy(true)
     setError(null)
     try {
+      const oldPhoto = existing?.photo_path ?? null
+      // New folder first, row second, old folder last: a failed save must never
+      // leave the row pointing at a photo that was already deleted.
+      const photoPath = photo ? await uploadProductPhoto(photo) : photoRemoved ? null : oldPhoto
       const savedId = await saveItem(existing?.id ?? null, {
         restaurant_id: restaurant.id,
         kind,
@@ -123,7 +149,11 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
         yield_pct: kind === 'raw' ? yld : null,
         batch_qty: kind === 'prep' ? batchBase : null,
         archived: existing?.archived ?? false,
+        location_id: kind === 'raw' ? locationId : (existing?.location_id ?? null),
+        order_unit: kind === 'raw' ? orderUnit.trim() || null : null,
+        photo_path: photoPath,
       })
+      if (oldPhoto && oldPhoto !== photoPath) await deleteProductPhoto(oldPhoto).catch(() => {})
       if (kind === 'prep') {
         await saveRecipe(
           restaurant.id,
@@ -183,8 +213,13 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
       </div>
 
       <div className="flex flex-col gap-6">
-        <Field label={t('name')}>
-          <input className={input} value={name} onChange={(e) => setName(e.target.value)} />
+        <Field label={t('name')} id="f-name">
+          <input
+            id="f-name"
+            className={input}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
         </Field>
 
         <Field label={t('unit')} help={t('unitHelp')}>
@@ -232,8 +267,94 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
 
         {kind === 'raw' ? (
           <>
-            <Field label={t('supplier')}>
+            <Field label={t('location')} help={t('locationHelp')} id="f-location">
+              {catalog.locations.length === 0 ? (
+                <p className="text-danger">{t('noLocations')}</p>
+              ) : (
+                <select
+                  id="f-location"
+                  aria-describedby="f-location-help"
+                  className={select}
+                  value={locationId}
+                  aria-invalid={locationMissing}
+                  onChange={(e) => {
+                    setLocationId(e.target.value)
+                    setLocationMissing(false)
+                  }}
+                >
+                  <option value="">{t('location')}</option>
+                  {catalog.locations.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {locationMissing && <p className="text-danger">{t('locationRequired')}</p>}
+            </Field>
+            <Field label={t('orderUnit')} help={t('orderUnitHelp')} id="f-order-unit">
+              <input
+                id="f-order-unit"
+                aria-describedby="f-order-unit-help"
+                className={input}
+                list="order-units"
+                value={orderUnit}
+                onChange={(e) => setOrderUnit(e.target.value)}
+              />
+              <datalist id="order-units">
+                {[...new Set(catalog.items.map((i) => i.order_unit).filter(Boolean))].map((u) => (
+                  <option key={u} value={u!} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label={t('photo')}>
+              <div className="flex items-center gap-4">
+                {shownPhoto && <img src={shownPhoto} alt="" className="size-20 object-cover" />}
+                <button
+                  type="button"
+                  className={chip(false)}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <CameraPlusIcon size={20} aria-hidden />
+                  {shownPhoto ? t('replacePhoto') : t('addPhoto')}
+                </button>
+                {shownPhoto && (
+                  <button
+                    type="button"
+                    className={quietButton}
+                    onClick={() => {
+                      setPhoto(null)
+                      setPreview(null)
+                      setPhotoRemoved(true)
+                    }}
+                  >
+                    {t('removePhoto')}
+                  </button>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    try {
+                      const p = await preparePhoto(file)
+                      setPhoto(p)
+                      setPreview(URL.createObjectURL(p.full))
+                      setPhotoRemoved(false)
+                    } catch (err) {
+                      setError(errorMessage(err))
+                    }
+                  }}
+                />
+              </div>
+            </Field>
+            <Field label={t('supplier')} id="f-supplier">
               <select
+                id="f-supplier"
                 className={select}
                 value={supplierId}
                 onChange={(e) => setSupplierId(e.target.value)}
@@ -246,8 +367,9 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
                 ))}
               </select>
             </Field>
-            <Field label={t('packQty')}>
+            <Field label={t('packQty')} id="f-pack-qty">
               <Amount
+                id="f-pack-qty"
                 value={packQty}
                 onChange={setPackQty}
                 unit={unit}
@@ -255,10 +377,11 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
                 onBig={setPackBig}
               />
             </Field>
-            <Field label={t('packPrice')}>
+            <Field label={t('packPrice')} id="f-pack-price">
               <div className="flex items-center gap-2">
                 <span className="text-lg">€</span>
                 <input
+                  id="f-pack-price"
                   className={`${input} num`}
                   inputMode="decimal"
                   value={packPrice}
@@ -266,8 +389,10 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
                 />
               </div>
             </Field>
-            <Field label={t('yieldPct')} help={t('yieldHelp')}>
+            <Field label={t('yieldPct')} help={t('yieldHelp')} id="f-yield">
               <input
+                id="f-yield"
+                aria-describedby="f-yield-help"
                 className={`${input} num`}
                 inputMode="decimal"
                 value={yieldPct}
@@ -278,8 +403,9 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
         ) : (
           <>
             <Recipe lines={lines} setLines={setLines} selfId={existing?.id} />
-            <Field label={t('batchQty')} help={t('batchHelp')}>
+            <Field label={t('batchQty')} help={t('batchHelp')} id="f-batch">
               <Amount
+                id="f-batch"
                 value={batchQty}
                 onChange={setBatchQty}
                 unit={unit}
@@ -346,23 +472,50 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
   )
 }
 
-function Field({ label, help, children }: { label: string; help?: string; children: ReactNode }) {
+/**
+ * A label above its control. With `id`, it is a real <label> tied to that
+ * control (click to focus, read out by screen readers); without, it heads a
+ * group of chips, where a <label> would click the first chip.
+ */
+function Field({
+  label,
+  help,
+  id,
+  children,
+}: {
+  label: string
+  help?: string
+  id?: string
+  children: ReactNode
+}) {
   return (
     <div className="flex flex-col gap-2">
-      <span className={labelClass}>{label}</span>
-      {help && <span className="-mt-1 text-ink-muted">{help}</span>}
+      {id ? (
+        <label htmlFor={id} className={labelClass}>
+          {label}
+        </label>
+      ) : (
+        <span className={labelClass}>{label}</span>
+      )}
+      {help && (
+        <span id={id && `${id}-help`} className="-mt-1 text-ink-muted">
+          {help}
+        </span>
+      )}
       {children}
     </div>
   )
 }
 
 function Amount({
+  id,
   value,
   onChange,
   unit,
   big,
   onBig,
 }: {
+  id: string
   value: string
   onChange: (v: string) => void
   unit: Unit
@@ -374,6 +527,7 @@ function Amount({
   return (
     <div className="flex items-center gap-2">
       <input
+        id={id}
         className={`${input} num`}
         inputMode="decimal"
         value={value}

@@ -2,10 +2,13 @@
 begin;
 insert into auth.users (id, email) values ('00000000-0000-0000-0000-00000000c001', 'cook1@test.local');
 insert into public.restaurants (id, name) values ('00000000-0000-0000-0000-0000000000a1', 'Test');
+insert into public.locations (id, restaurant_id, name) values
+  ('00000000-0000-0000-0000-0000000006a1', '00000000-0000-0000-0000-0000000000a1', 'Koelcel'),
+  ('00000000-0000-0000-0000-0000000006a2', '00000000-0000-0000-0000-0000000000a1', 'Droog');
 insert into public.members (restaurant_id, user_id, name, email, role) values
   ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000c001', 'Cook One', 'cook1@test.local', 'cook');
-insert into public.items (id, restaurant_id, kind, name, unit, pack_qty, pack_price) values
-  ('00000000-0000-0000-0000-0000000001a1', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Room', 'ml', 6000, 15);
+insert into public.items (id, restaurant_id, kind, name, unit, pack_qty, pack_price, location_id) values
+  ('00000000-0000-0000-0000-0000000001a1', '00000000-0000-0000-0000-0000000000a1', 'raw', 'Room', 'ml', 6000, 15, '00000000-0000-0000-0000-0000000006a1');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000c001","role":"authenticated"}', true);
 insert into public.waste_entries (id, item_id, qty, reason) values

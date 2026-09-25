@@ -12,6 +12,7 @@ import type {
   Restaurant,
   Station,
   Supplier,
+  Location,
 } from '../types'
 import { execute, query } from './query'
 
@@ -68,11 +69,12 @@ export type Catalog = {
   items: Item[]
   stations: Station[]
   suppliers: Supplier[]
+  locations: Location[]
   recipeLines: RecipeLine[]
 }
 
 export async function fetchCatalog(restaurantId: string): Promise<Catalog> {
-  const [items, stations, suppliers, recipeLines] = await Promise.all([
+  const [items, stations, suppliers, locations, recipeLines] = await Promise.all([
     query<Item[]>(() =>
       supabase.from('items_with_cost').select('*').eq('restaurant_id', restaurantId).order('name'),
     ),
@@ -82,6 +84,9 @@ export async function fetchCatalog(restaurantId: string): Promise<Catalog> {
     query<Supplier[]>(() =>
       supabase.from('suppliers').select('*').eq('restaurant_id', restaurantId).order('name'),
     ),
+    query<Location[]>(() =>
+      supabase.from('locations').select('*').eq('restaurant_id', restaurantId).order('sort_order'),
+    ),
     query<RecipeLine[]>(() =>
       supabase
         .from('recipe_lines')
@@ -89,10 +94,13 @@ export async function fetchCatalog(restaurantId: string): Promise<Catalog> {
         .eq('restaurant_id', restaurantId),
     ),
   ])
-  return { items, stations, suppliers, recipeLines }
+  return { items, stations, suppliers, locations, recipeLines }
 }
 
-export type ItemInput = Omit<Item, 'id' | 'unit_cost' | 'cleaned_unit_cost'>
+// sort_order is left out on purpose: the database places a product at the end
+// of its location, and the order app owns the route after that. Sending it
+// back on every save would undo a reorder made there.
+export type ItemInput = Omit<Item, 'id' | 'unit_cost' | 'cleaned_unit_cost' | 'sort_order'>
 
 export async function saveItem(id: string | null, input: ItemInput): Promise<string> {
   if (id) {
@@ -133,18 +141,63 @@ export async function saveRecipe(
   }
 }
 
-export async function addSupplier(restaurantId: string, name: string) {
-  return query<Supplier>(() =>
-    supabase.from('suppliers').insert({ restaurant_id: restaurantId, name }).select().single(),
+/** Suppliers and locations are both a named list; locations also have a route position. */
+export type NamedTable = 'suppliers' | 'locations'
+
+export function addNamed(
+  table: NamedTable,
+  restaurantId: string,
+  name: string,
+  sortOrder?: number,
+) {
+  return execute(() =>
+    supabase.from(table).insert({
+      restaurant_id: restaurantId,
+      name,
+      ...(table === 'locations' ? { sort_order: sortOrder } : {}),
+    }),
   )
 }
 
-export function renameSupplier(id: string, name: string) {
-  return execute(() => supabase.from('suppliers').update({ name }).eq('id', id))
+export function renameNamed(table: NamedTable, id: string, name: string) {
+  return execute(() => supabase.from(table).update({ name }).eq('id', id))
 }
 
-export function deleteSupplier(id: string) {
-  return execute(() => supabase.from('suppliers').delete().eq('id', id))
+export function deleteNamed(table: NamedTable, id: string) {
+  return execute(() => supabase.from(table).delete().eq('id', id))
+}
+
+// ---------------------------------------------------------------------------
+// Product photos: the order app's bucket and format, so both apps read them.
+// A new folder per upload; the old one is deleted only after the row is saved.
+// ---------------------------------------------------------------------------
+
+const PRODUCT_PHOTOS = 'ingredient-photos'
+
+export async function uploadProductPhoto(photo: PreparedPhoto): Promise<string> {
+  const folder = crypto.randomUUID()
+  for (const [name, blob] of [
+    ['full', photo.full],
+    ['thumb', photo.thumb],
+  ] as const) {
+    await execute(() =>
+      supabase.storage
+        .from(PRODUCT_PHOTOS)
+        .upload(`${folder}/${name}`, blob, { contentType: photo.type, cacheControl: '31536000' }),
+    )
+  }
+  return folder
+}
+
+export function deleteProductPhoto(folder: string) {
+  return execute(() =>
+    supabase.storage.from(PRODUCT_PHOTOS).remove([`${folder}/full`, `${folder}/thumb`]),
+  )
+}
+
+/** Public URL, no signing: the bucket is public, like the order app's. */
+export function productPhotoUrl(folder: string, size: 'full' | 'thumb'): string {
+  return supabase.storage.from(PRODUCT_PHOTOS).getPublicUrl(`${folder}/${size}`).data.publicUrl
 }
 
 // ---------------------------------------------------------------------------

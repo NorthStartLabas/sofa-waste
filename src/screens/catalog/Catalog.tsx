@@ -19,7 +19,13 @@ import {
   quietButton,
   wide,
 } from '../../components/styles'
-import { addSupplier, deleteSupplier, renameSupplier } from '../../data/api'
+import {
+  addNamed,
+  deleteNamed,
+  productPhotoUrl,
+  renameNamed,
+  type NamedTable,
+} from '../../data/api'
 import { useCatalog } from '../../data/catalogContext'
 import { errorMessage } from '../../lib/errors'
 import { perBigUnit } from '../../lib/format'
@@ -27,7 +33,7 @@ import { useT } from '../../lib/i18n'
 import { matches } from '../../lib/search'
 import type { Kind } from '../../types'
 
-type Tab = Kind | 'suppliers'
+type Tab = Kind | NamedTable
 
 /**
  * Master-detail. On a desktop the list stays on the left while an item is
@@ -82,20 +88,31 @@ function TabsAndList({ tab, pick }: { tab: Tab; pick: (t: Tab) => void }) {
         </button>
         <button
           type="button"
+          className={chip(tab === 'locations')}
+          onClick={() => pick('locations')}
+        >
+          {t('locations')}
+        </button>
+        <button
+          type="button"
           className={chip(tab === 'suppliers')}
           onClick={() => pick('suppliers')}
         >
           {t('suppliers')}
         </button>
       </div>
-      {tab === 'suppliers' ? <Suppliers /> : <Items kind={tab} />}
+      {tab === 'suppliers' || tab === 'locations' ? (
+        <NamedList key={tab} table={tab} />
+      ) : (
+        <Items kind={tab} />
+      )}
     </>
   )
 }
 
 function Items({ kind }: { kind: Kind }) {
   const { t, lang } = useT()
-  const { items, suppliers, loading, error, reload } = useCatalog()
+  const { items, suppliers, locations, loading, error, reload } = useCatalog()
   const [term, setTerm] = useState('')
   const [archived, setArchived] = useState(false)
   const ofKind = items.filter((i) => i.kind === kind)
@@ -156,10 +173,21 @@ function Items({ kind }: { kind: Kind }) {
                 }`
               }
             >
-              <span className="min-w-0">
+              {i.photo_path && (
+                <img
+                  src={productPhotoUrl(i.photo_path, 'thumb')}
+                  alt=""
+                  width={40}
+                  height={40}
+                  loading="lazy"
+                  className="size-10 shrink-0 object-cover"
+                />
+              )}
+              <span className="min-w-0 flex-1">
                 <span className="block truncate text-lg">{i.name}</span>
                 <span className="block text-ink-muted">
                   {[
+                    locations.find((l) => l.id === i.location_id)?.name,
                     suppliers.find((s) => s.id === i.supplier_id)?.name,
                     i.yield_pct != null && `${i.yield_pct}%`,
                   ]
@@ -193,10 +221,13 @@ function Items({ kind }: { kind: Kind }) {
   )
 }
 
-function Suppliers() {
+/** Suppliers and locations: add, rename in place, delete. New locations join the end of the route. */
+function NamedList({ table }: { table: NamedTable }) {
   const { t } = useT()
   const { restaurant } = useMember()
-  const { suppliers, reload } = useCatalog()
+  const catalog = useCatalog()
+  const { reload } = catalog
+  const rows = catalog[table]
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -220,13 +251,20 @@ function Suppliers() {
           e.preventDefault()
           const clean = name.trim()
           if (clean)
-            void run(() => addSupplier(restaurant.id, clean)).then((ok) => ok && setName(''))
+            void run(() =>
+              addNamed(
+                table,
+                restaurant.id,
+                clean,
+                Math.max(-1, ...catalog.locations.map((l) => l.sort_order)) + 1,
+              ),
+            ).then((ok) => ok && setName(''))
         }}
       >
         <input
           className={input}
-          placeholder={t('newSupplier')}
-          aria-label={t('newSupplier')}
+          placeholder={table === 'suppliers' ? t('newSupplier') : t('newLocation')}
+          aria-label={table === 'suppliers' ? t('newSupplier') : t('newLocation')}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -241,7 +279,7 @@ function Suppliers() {
         </div>
       )}
       <ul className="mt-4">
-        {suppliers.map((s) => (
+        {rows.map((s) => (
           <li
             key={s.id}
             className="flex min-h-16 items-center justify-between gap-2 border-b border-line"
@@ -252,7 +290,7 @@ function Suppliers() {
               aria-label={t('name')}
               onBlur={(e) => {
                 const clean = e.target.value.trim()
-                if (clean && clean !== s.name) void run(() => renameSupplier(s.id, clean))
+                if (clean && clean !== s.name) void run(() => renameNamed(table, s.id, clean))
               }}
             />
             <button
@@ -261,7 +299,8 @@ function Suppliers() {
               aria-label={`${t('delete')}: ${s.name}`}
               title={t('delete')}
               onClick={() =>
-                window.confirm(`${t('delete')}: ${s.name}?`) && void run(() => deleteSupplier(s.id))
+                window.confirm(`${t('delete')}: ${s.name}?`) &&
+                void run(() => deleteNamed(table, s.id))
               }
             >
               <TrashIcon size={20} />
