@@ -202,7 +202,8 @@ export function Frame({ children }: { children: ReactNode }) {
           </div>
         </header>
         <main className="page-x mx-auto w-full max-w-md flex-1 py-10 lg:flex lg:flex-col lg:justify-center lg:py-16">
-          {children}
+          {/* One block inside the centring flex column, so links and buttons keep their own width. */}
+          <div>{children}</div>
         </main>
       </div>
     </div>
