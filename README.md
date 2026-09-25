@@ -34,9 +34,21 @@ This database is meant to hold the order app's catalog too. A raw product here a
 | `archived` | `archived` |
 | `photo_path` (uuid folder with `full` + `thumb`) | `photo_path`, same bucket name (`ingredient-photos`) and format |
 
-What the move still needs:
+The rest of the order app has its tables here too:
 
-- `locations` and `suppliers` rows need a `restaurant_id`.
-- Each ingredient needs a waste `unit` here (`g`, `ml` or `pcs`), which is a different thing from what it's ordered in.
-- `dishes` and `dish_ingredients` are not in this database yet; they come with the order app.
+| Order app | Here |
+|---|---|
+| `dishes` | `dishes` (+ `restaurant_id`) |
+| `dish_ingredients (dish_id, ingredient_id)` | `dish_items (dish_id, item_id)` |
+| `orders (sent_at, sent_by, user_id)` | `orders`, append-only, same columns |
+| `order_lines (ingredient_id, ingredient_name, unit, quantity)` | `order_lines (item_id, item_name, unit, quantity)` |
+
+**Copied on 2026-09-25** with `scripts/import-order-app/` (ids kept, the order app only read): 146 products, 3 locations, 3 suppliers, 132 photos, 22 dishes with 129 links, 39 orders with 719 lines. Each product's waste unit was guessed from its order unit (bottles in ml, pieces counted, the rest in grams); a chef can change it. Imported orders keep who sent them by name; the old accounts don't exist here, so they aren't linked to a login.
+
+Still to do when the order app itself moves:
+
+- Point it at this project and rename its queries to the tables above.
+- Re-run the import first: it adds anything created in the order app since, but doesn't update rows that changed.
+- Its users need accounts here (the waste app's PIN accounts are a different sign-in).
+- `basket_items` (unsent baskets) weren't copied; they empty at midnight anyway.
 - The order app lets every account edit the catalog; here only chefs and admins can.
