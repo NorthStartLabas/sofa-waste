@@ -96,7 +96,7 @@ export type Report = {
   covers: number
   per_cover: number | null
   by_reason: { reason: Reason; total: number | null; entries: number }[]
-  by_station: { station: string; total: number | null; entries: number }[]
+  by_station: { station: string | null; total: number | null; entries: number }[]
   top_items: ReportRow[]
   repeated: ReportRow[]
   incomplete: { name: string; entries: number }[]

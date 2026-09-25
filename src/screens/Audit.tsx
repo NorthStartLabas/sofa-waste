@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useMember } from '../auth/authContext'
-import { ScreenTitle } from '../components/Shell'
+import { CaretDownIcon } from '@phosphor-icons/react'
+import { PageHeader } from '../components/Shell'
+import { ErrorLine, SkeletonRows } from '../components/States'
 import { column, secondaryButton } from '../components/styles'
 import { fetchAudit, fetchMembers } from '../data/api'
 import { errorMessage } from '../lib/errors'
@@ -40,8 +42,9 @@ export function Audit() {
 
   return (
     <div className={column}>
-      <ScreenTitle title={t('audit')} />
-      {error && <p className="text-danger">{error}</p>}
+      <PageHeader title={t('audit')} meta={t('auditHelp')} />
+      {error && <ErrorLine message={error} onRetry={() => void load()} />}
+      {!error && rows.length === 0 && more && <SkeletonRows rows={6} tall />}
       <ul>
         {rows.map((r) => {
           const subject = String(
@@ -70,7 +73,8 @@ export function Audit() {
           className={`${secondaryButton} my-6`}
           onClick={() => void load(rows[rows.length - 1].id)}
         >
-          ↓
+          <CaretDownIcon size={18} aria-hidden />
+          {t('loadMore')}
         </button>
       )}
     </div>

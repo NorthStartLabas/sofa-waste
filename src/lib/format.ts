@@ -2,9 +2,9 @@ import type { Lang } from './i18n'
 
 const locale = (lang: Lang) => (lang === 'nl' ? 'nl-NL' : 'en-GB')
 
-/** Euros, or a dash for "incomplete". Never €0,00 for a cost nobody knows. */
+/** Euros, or "onvolledig" for a cost nobody knows. Never €0,00 for that. */
 export function euro(n: number | null | undefined, lang: Lang, digits = 2): string {
-  if (n == null) return '—'
+  if (n == null) return lang === 'nl' ? 'onvolledig' : 'incomplete'
   return new Intl.NumberFormat(locale(lang), {
     style: 'currency',
     currency: 'EUR',

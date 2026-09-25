@@ -5,6 +5,7 @@ import { useAuth, useMember } from './auth/authContext'
 import { SetPin } from './auth/SetPin'
 import { Frame, SignIn } from './auth/SignIn'
 import { Shell } from './components/Shell'
+import { SkeletonRows } from './components/States'
 import { primaryButton, quietButton } from './components/styles'
 import { CatalogProvider } from './data/CatalogProvider'
 import { isShared, saveLang, savedLang } from './lib/device'
@@ -44,7 +45,12 @@ function Gate() {
   const { session, member, restaurant, loading, error, reload, signOut } = useAuth()
 
   if (!session) return <SignIn />
-  if (loading && !member) return <Frame>{t('loading')}</Frame>
+  if (loading && !member)
+    return (
+      <Frame>
+        <SkeletonRows rows={3} />
+      </Frame>
+    )
   if (error)
     return (
       <Frame>
@@ -88,9 +94,10 @@ function AppRoutes() {
       <Route path="/overview" element={only(isChef, <Overview />)} />
       <Route path="/week" element={only(isChef, <Week />)} />
       <Route path="/covers" element={only(isChef, <Covers />)} />
-      <Route path="/catalog" element={only(isChef, <Catalog />)} />
-      <Route path="/catalog/new/:kind" element={only(isChef, <ItemEditor />)} />
-      <Route path="/catalog/:id" element={only(isChef, <ItemEditor />)} />
+      <Route path="/catalog" element={only(isChef, <Catalog />)}>
+        <Route path="new/:kind" element={<ItemEditor />} />
+        <Route path=":id" element={<ItemEditor />} />
+      </Route>
       <Route path="/users" element={only(isAdmin, <Users />)} />
       <Route path="/audit" element={only(isManager, <Audit />)} />
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,12 +1,15 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useMember } from '../../auth/authContext'
-import { ScreenTitle } from '../../components/Shell'
+import { ArrowLeftIcon, TrashIcon, XIcon } from '@phosphor-icons/react'
+import { SkeletonRows } from '../../components/States'
 import {
   chip,
-  column,
+  iconButton,
+  label as labelClass,
   dangerButton,
   input,
+  inputBase,
   primaryButton,
   quietButton,
   secondaryButton,
@@ -37,7 +40,7 @@ export function ItemEditor() {
   const catalog = useCatalog()
   const existing = catalog.items.find((i) => i.id === id)
   if (id && !existing) {
-    return <div className={column}>{catalog.loading ? '…' : '404'}</div>
+    return catalog.loading ? <SkeletonRows rows={6} /> : <Navigate to="/catalog" replace />
   }
   // key: switching from one item to another must start from fresh state.
   return (
@@ -153,18 +156,31 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
   }
 
   return (
-    <div className={column}>
+    <div className="rise px-[var(--spacing-gutter)] lg:border lg:border-line lg:bg-paper-raised lg:p-8">
       <button
         type="button"
-        className={`${quietButton} -ml-6 mt-4`}
+        className={`${quietButton} mt-4 lg:hidden`}
         onClick={() => navigate('/catalog')}
       >
-        ← {t('catalog')}
+        <ArrowLeftIcon size={20} aria-hidden />
+        {t('catalog')}
       </button>
-      <ScreenTitle
-        eyebrow={kind === 'raw' ? t('products') : t('components')}
-        title={existing ? existing.name : kind === 'raw' ? t('newProduct') : t('newComponent')}
-      />
+      <div className="mt-4 mb-6 flex items-start justify-between gap-4 lg:mt-0">
+        <div className="min-w-0">
+          <p className="text-ink-muted">{kind === 'raw' ? t('product') : t('component')}</p>
+          <h1 className="text-h2">
+            {existing ? existing.name : kind === 'raw' ? t('newProduct') : t('newComponent')}
+          </h1>
+        </div>
+        <button
+          type="button"
+          aria-label={t('close')}
+          onClick={() => navigate('/catalog')}
+          className="hidden size-12 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-paper-sunk lg:flex"
+        >
+          <XIcon size={22} />
+        </button>
+      </div>
 
       <div className="flex flex-col gap-6">
         <Field label={t('name')}>
@@ -275,7 +291,7 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
         )}
 
         <div className="border-t border-line pt-4">
-          <p className="eyebrow mb-1">{t('costPerUnit')}</p>
+          <p className={`${labelClass} mb-1`}>{t('costPerUnit')}</p>
           <p className="num text-h3 font-display text-highlight">
             {liveCost != null ? (
               perBigUnit(liveCost, unit, lang)
@@ -319,6 +335,7 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
                   void run(() => deleteItem(existing.id))
                 }
               >
+                <TrashIcon size={18} aria-hidden />
                 {t('delete')}
               </button>
             </>
@@ -332,7 +349,7 @@ function Editor({ existing, kind }: { existing: Item | null; kind: Kind }) {
 function Field({ label, help, children }: { label: string; help?: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="eyebrow">{label}</span>
+      <span className={labelClass}>{label}</span>
       {help && <span className="-mt-1 text-ink-muted">{help}</span>}
       {children}
     </div>
@@ -396,7 +413,7 @@ function Recipe({
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="eyebrow">{t('recipe')}</span>
+      <span className={labelClass}>{t('recipe')}</span>
       <span className="-mt-1 text-ink-muted">{t('recipeHelp')}</span>
       <ul>
         {lines.map((l, idx) => {
@@ -417,7 +434,7 @@ function Recipe({
                 </span>
               </span>
               <input
-                className={`${input} num w-28`}
+                className={`${inputBase} num w-24 shrink-0 px-4 text-right`}
                 inputMode="decimal"
                 aria-label={t('quantity')}
                 value={l.qty}
@@ -428,11 +445,11 @@ function Recipe({
               <span className="w-8 text-ink-muted">{ing ? t(`unit_${ing.unit}`) : ''}</span>
               <button
                 type="button"
-                aria-label={t('delete')}
-                className="min-h-12 min-w-12 text-2xl text-ink-muted"
+                aria-label={`${t('delete')}: ${ing?.name ?? ''}`}
+                className={iconButton}
                 onClick={() => setLines(lines.filter((_, i) => i !== idx))}
               >
-                ×
+                <XIcon size={20} />
               </button>
             </li>
           )

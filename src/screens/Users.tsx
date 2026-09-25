@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useMember } from '../auth/authContext'
-import { ScreenTitle } from '../components/Shell'
+import { InfoIcon, KeyIcon, TrashIcon, UserPlusIcon } from '@phosphor-icons/react'
+import { PageHeader } from '../components/Shell'
 import {
   chip,
-  column,
   dangerButton,
+  help,
   input,
+  label,
+  panel,
   primaryButton,
   secondaryButton,
+  wide,
 } from '../components/styles'
 import { fetchMembers, updateMember } from '../data/api'
 import { errorMessage } from '../lib/errors'
@@ -114,94 +118,118 @@ export function Users() {
   }
 
   return (
-    <div className={column}>
-      <ScreenTitle title={t('users')} />
+    <div className={wide}>
+      <PageHeader title={t('users')} meta={t('nPeople', { n: members.length })} />
       {notice && (
-        <p className="mb-6 border border-accent bg-accent-soft p-4 text-accent" role="status">
+        <p
+          className="mb-6 flex items-start gap-3 border-l-2 border-accent bg-accent-soft px-4 py-3 text-accent"
+          role="status"
+        >
+          <InfoIcon size={20} className="mt-0.5 shrink-0" aria-hidden />
           {notice}
         </p>
       )}
 
-      <form
-        className="mb-10 flex flex-col gap-3 border border-line bg-paper-raised p-4"
-        onSubmit={(e) => {
-          e.preventDefault()
-          void create()
-        }}
-      >
-        <p className="text-h3 font-display">{t('newUser')}</p>
-        <input
-          className={input}
-          placeholder={t('name')}
-          aria-label={t('name')}
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <input
-          className={input}
-          type="email"
-          placeholder={t('email')}
-          aria-label={t('email')}
-          required
-          autoCapitalize="none"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <div className="flex flex-wrap gap-2">
-          {ROLES.map((r) => (
-            <button key={r} type="button" className={chip(role === r)} onClick={() => setRole(r)}>
-              {t(`role_${r}`)}
-            </button>
-          ))}
-        </div>
-        <button className={primaryButton} disabled={busy}>
-          {t('add')}
-        </button>
-      </form>
-
-      <ul>
-        {members.map((m) => (
-          <li
-            key={m.user_id}
-            className={`border-b border-line py-4 ${m.active ? '' : 'opacity-60'}`}
-          >
-            <p className="text-lg">{m.name}</p>
-            <p className="text-ink-muted">
-              {m.email}
-              {m.must_change_pin && ` · ${t('mustChangePin')}`}
-              {!m.active && ` · ${t('inactive')}`}
-            </p>
-            {m.user_id !== me.user_id && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {ROLES.map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    className={chip(m.role === r)}
-                    onClick={() => void patch(m, { role: r })}
-                  >
-                    {t(`role_${r}`)}
-                  </button>
-                ))}
-                <button type="button" className={secondaryButton} onClick={() => void reset(m)}>
-                  {t('resetPin')}
-                </button>
+      <div className="lg:grid lg:grid-cols-12 lg:items-start lg:gap-12">
+        <form
+          className={`${panel} mb-10 flex flex-col gap-4 p-5 lg:sticky lg:top-8 lg:col-span-4 lg:p-6`}
+          onSubmit={(e) => {
+            e.preventDefault()
+            void create()
+          }}
+        >
+          <h2 className="text-h3">{t('newUser')}</h2>
+          <label className="flex flex-col gap-2">
+            <span className={label}>{t('name')}</span>
+            <input
+              className={input}
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-2">
+            <span className={label}>{t('email')}</span>
+            <input
+              className={input}
+              type="email"
+              required
+              autoCapitalize="none"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <span className={help}>{t('emailHelp')}</span>
+          </label>
+          <div className="flex flex-col gap-2">
+            <span className={label}>{t('role')}</span>
+            <div className="flex flex-wrap gap-2">
+              {ROLES.map((r) => (
                 <button
+                  key={r}
                   type="button"
-                  className={secondaryButton}
-                  onClick={() => void patch(m, { active: !m.active })}
+                  className={chip(role === r)}
+                  onClick={() => setRole(r)}
                 >
-                  {m.active ? t('deactivate') : t('activate')}
+                  {t(`role_${r}`)}
                 </button>
-                <button type="button" className={dangerButton} onClick={() => void remove(m)}>
-                  {t('delete')}
-                </button>
+              ))}
+            </div>
+          </div>
+          <button className={`${primaryButton} mt-2`} disabled={busy}>
+            <UserPlusIcon size={20} aria-hidden />
+            {t('add')}
+          </button>
+        </form>
+
+        <ul className="lg:col-span-8">
+          {members.map((m) => (
+            <li
+              key={m.user_id}
+              className={`border-b border-line py-5 ${m.active ? '' : 'opacity-60'}`}
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                <p className="text-lg font-medium">{m.name}</p>
+                <p className="text-ink-muted">
+                  {t(`role_${m.role}`)}
+                  {m.must_change_pin && `, ${t('mustChangePin')}`}
+                  {!m.active && `, ${t('inactive').toLowerCase()}`}
+                </p>
               </div>
-            )}
-          </li>
-        ))}
-      </ul>
+              <p className="text-ink-muted">{m.email}</p>
+              {m.user_id !== me.user_id && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {ROLES.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className={chip(m.role === r)}
+                      onClick={() => void patch(m, { role: r })}
+                    >
+                      {t(`role_${r}`)}
+                    </button>
+                  ))}
+                  <span className="hidden w-px self-stretch bg-line sm:block" aria-hidden />
+                  <button type="button" className={secondaryButton} onClick={() => void reset(m)}>
+                    <KeyIcon size={18} aria-hidden />
+                    {t('resetPin')}
+                  </button>
+                  <button
+                    type="button"
+                    className={secondaryButton}
+                    onClick={() => void patch(m, { active: !m.active })}
+                  >
+                    {m.active ? t('deactivate') : t('activate')}
+                  </button>
+                  <button type="button" className={dangerButton} onClick={() => void remove(m)}>
+                    <TrashIcon size={18} aria-hidden />
+                    {t('delete')}
+                  </button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }

@@ -53,7 +53,7 @@ function lastWeekMonday(timezone: string): string {
 }
 
 function euro(n: number | null | undefined): string {
-  if (n == null) return '—'
+  if (n == null) return 'onvolledig'
   return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n)
 }
 
@@ -90,7 +90,7 @@ type Report = {
   covers: number
   per_cover: number | null
   by_reason: { reason: string; total: number | null; entries: number }[]
-  by_station: { station: string; total: number | null; entries: number }[]
+  by_station: { station: string | null; total: number | null; entries: number }[]
   top_items: Row[]
   repeated: Row[]
   incomplete: { name: string; entries: number }[]
@@ -133,14 +133,14 @@ function render(restaurant: string, r: Report): string {
   ${h2('Top producten')}${
     r.top_items.length
       ? table(r.top_items.map((x) => [escapeHtml(x.name), qty(x), euro(x.total)]))
-      : '<p>—</p>'
+      : '<p>Niets met volledige kosten.</p>'
   }
-  ${h2('Per reden')}${table(r.by_reason.map((x) => [REASONS[x.reason] ?? x.reason, `${x.entries}×`, euro(x.total)]))}
-  ${h2('Per station')}${table(r.by_station.map((x) => [escapeHtml(x.station), `${x.entries}×`, euro(x.total)]))}
+  ${h2('Per reden')}${table(r.by_reason.map((x) => [REASONS[x.reason] ?? x.reason, `${x.entries}x`, euro(x.total)]))}
+  ${h2('Per station')}${table(r.by_station.map((x) => [escapeHtml(x.station ?? 'Zonder station'), `${x.entries}x`, euro(x.total)]))}
   ${
     r.incomplete.length
       ? h2('Kosten onvolledig (prijs of batchgewicht ontbreekt)') +
-        table(r.incomplete.map((x) => [escapeHtml(x.name), `${x.entries}×`]))
+        table(r.incomplete.map((x) => [escapeHtml(x.name), `${x.entries}x`]))
       : ''
   }
   <p style="margin-top:32px"><a href="${APP_URL}" style="color:#3e5140">Open de app</a></p>

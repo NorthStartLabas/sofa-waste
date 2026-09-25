@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Keypad } from '../components/Keypad'
 import { Logo } from '../components/Logo'
+import dish from '../assets/signin-dish.webp'
 import { input, primaryButton, quietButton } from '../components/styles'
 import { forgetPerson, knownPeople, type KnownPerson } from '../lib/device'
 import { time } from '../lib/format'
@@ -56,7 +57,7 @@ export function SignIn() {
 
   function onKey(k: string) {
     if (busy || !person) return
-    if (k === '⌫') return setPin((p) => p.slice(0, -1))
+    if (k === 'back') return setPin((p) => p.slice(0, -1))
     const next = (pin + k).slice(0, 4)
     setPin(next)
     if (next.length === 4) void submit(next, person.email)
@@ -73,7 +74,7 @@ export function SignIn() {
         </p>
         <Keypad onKey={onKey} />
         <p className="mt-6 text-ink-muted">{t('forgotPin')}</p>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-x-8 gap-y-2">
           <button
             type="button"
             className={quietButton}
@@ -176,14 +177,34 @@ export function PinDots({ count }: { count: number }) {
 }
 
 export function Frame({ children }: { children: ReactNode }) {
+  const { t } = useT()
   return (
-    <div className="min-h-dvh">
-      <header className="bg-deep pt-[env(safe-area-inset-top)] text-on-deep">
-        <div className="page-x mx-auto flex h-16 max-w-md items-center">
-          <Logo className="h-5" />
+    <div className="min-h-dvh lg:grid lg:grid-cols-2">
+      {/* Desktop only: one of SOFA's own plates, under a moss scrim with the wordmark. */}
+      <div className="relative hidden overflow-hidden bg-deep lg:block">
+        <img
+          src={dish}
+          alt=""
+          width={900}
+          height={900}
+          className="absolute inset-0 size-full object-cover opacity-80"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-deep via-deep/30 to-deep/60" />
+        <div className="relative flex h-full flex-col justify-between p-12 text-on-deep">
+          <Logo className="h-7" />
+          <p className="max-w-sm font-display text-h2">{t('signInTagline')}</p>
         </div>
-      </header>
-      <main className="page-x mx-auto max-w-md py-10">{children}</main>
+      </div>
+      <div className="flex min-h-dvh flex-col">
+        <header className="bg-deep pt-[env(safe-area-inset-top)] text-on-deep lg:hidden">
+          <div className="page-x mx-auto flex h-14 max-w-md items-center">
+            <Logo className="h-5" />
+          </div>
+        </header>
+        <main className="page-x mx-auto w-full max-w-md flex-1 py-10 lg:flex lg:flex-col lg:justify-center lg:py-16">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

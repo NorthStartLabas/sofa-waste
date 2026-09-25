@@ -2,8 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { useMember } from '../auth/authContext'
 import { EntryRow } from '../components/EntryRow'
 import { groupByDay } from '../lib/groupByDay'
-import { ScreenTitle } from '../components/Shell'
-import { column, dangerButton } from '../components/styles'
+import { Link } from 'react-router-dom'
+import { ListBulletsIcon } from '@phosphor-icons/react'
+import { PageHeader } from '../components/Shell'
+import { Empty, ErrorLine, SkeletonRows } from '../components/States'
+import { column, dangerButton, money, primaryButton } from '../components/styles'
 import { deleteEntry, fetchMyEntries } from '../data/api'
 import { useCatalog } from '../data/catalogContext'
 import { errorMessage } from '../lib/errors'
@@ -51,12 +54,23 @@ export function MyEntries() {
 
   return (
     <div className={column}>
-      <ScreenTitle eyebrow={t('thisWeek')} title={t('navMine')}>
-        <span className="num text-h3 text-highlight">{euro(total, lang)}</span>
-      </ScreenTitle>
-      {error && <p className="mb-4 text-danger">{error}</p>}
-      {entries === null && !error && <p className="text-ink-muted">{t('loading')}</p>}
-      {entries?.length === 0 && <p className="text-ink-muted">{t('nothingYet')}</p>}
+      <PageHeader title={t('navMine')} meta={t('thisWeek')}>
+        <span className={`${money} text-h3`}>{euro(total, lang)}</span>
+      </PageHeader>
+      {error && (
+        <div className="mb-4">
+          <ErrorLine message={error} onRetry={() => void load()} />
+        </div>
+      )}
+      {entries === null && !error && <SkeletonRows tall />}
+      {entries?.length === 0 && (
+        <Empty icon={ListBulletsIcon} title={t('nothingYet')}>
+          <p className="text-ink-muted">{t('nothingYetHelp')}</p>
+          <Link to="/" className={primaryButton}>
+            {t('navLog')}
+          </Link>
+        </Empty>
+      )}
       {groupByDay(entries ?? []).map(([key, rows]) => (
         <section key={key} className="mb-6">
           <p className="eyebrow mb-1">

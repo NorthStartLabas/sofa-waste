@@ -29,13 +29,13 @@ export function EntryRow({
           <span className="num">
             {number(entry.qty, lang, 2)} {t(`unit_${entry.unit}`)}
           </span>
-          {entry.cleaned && ` · ${t('cleaned').toLowerCase()}`} · {t(`reason_${entry.reason}`)}
-          {entry.note && ` · ${entry.note}`}
+          {entry.cleaned && `, ${t('cleaned').toLowerCase()}`}, {t(`reason_${entry.reason}`)}
+          {entry.note && `. ${entry.note}`}
         </span>
         <span className="block text-ink-muted">
           {time(entry.logged_at, lang)}
-          {stationName && ` · ${stationName}`}
-          {showCook && ` · ${entry.logged_by_name}`}
+          {stationName && `, ${stationName}`}
+          {showCook && `, ${entry.logged_by_name}`}
         </span>
       </span>
       <span className="num shrink-0 text-right text-lg text-highlight">

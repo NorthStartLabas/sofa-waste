@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth, useMember } from '../auth/authContext'
-import { ScreenTitle } from '../components/Shell'
+import { CaretRightIcon, SignOutIcon } from '@phosphor-icons/react'
+import { PageHeader } from '../components/Shell'
 import { chip, column, secondaryButton } from '../components/styles'
 import { isShared, setShared } from '../lib/device'
 import { useT, type Key } from '../lib/i18n'
@@ -22,20 +23,21 @@ export function More() {
 
   return (
     <div className={column}>
-      <ScreenTitle eyebrow={t('signedInAs', { name: member.name })} title={t('more')} />
+      <PageHeader title={t('settings')} meta={t('signedInAs', { name: member.name })} />
       <ul className="mb-8">
         {links
           .filter(([, , show]) => show)
           .map(([to, key]) => (
             <li key={to} className="border-b border-line">
               <Link to={to} className="flex min-h-16 items-center justify-between text-lg">
-                {t(key)} <span aria-hidden>→</span>
+                {t(key)}
+                <CaretRightIcon size={20} className="text-ink-muted" aria-hidden />
               </Link>
             </li>
           ))}
       </ul>
 
-      <p className="eyebrow mb-2">{t('language')}</p>
+      <h2 className="mb-2 text-h3">{t('language')}</h2>
       <div className="mb-8 flex gap-2">
         <button type="button" className={chip(lang === 'nl')} onClick={() => setLang('nl')}>
           Nederlands
@@ -45,7 +47,7 @@ export function More() {
         </button>
       </div>
 
-      <p className="eyebrow mb-2">{t('sharedDevice')}</p>
+      <h2 className="mb-1 text-h3">{t('sharedDevice')}</h2>
       <p className="mb-3 text-ink-muted">{t('sharedDeviceHelp')}</p>
       <div className="mb-8 flex gap-2">
         {[true, false].map((v) => (
@@ -64,6 +66,7 @@ export function More() {
       </div>
 
       <button type="button" className={secondaryButton} onClick={() => void signOut()}>
+        <SignOutIcon size={20} aria-hidden />
         {t('signOut')}
       </button>
     </div>

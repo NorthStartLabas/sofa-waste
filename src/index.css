@@ -104,6 +104,7 @@
 /* The website's section label: small tracked caps. Labels only, never
    something a cook must read to act. */
 @utility eyebrow {
+  font-family: var(--font-sans);
   font-size: 0.8125rem;
   line-height: 1.2;
   letter-spacing: 0.18em;
@@ -136,4 +137,14 @@ body::after {
 }
 .rise {
   animation: rise 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* The undo toast's time running out. Transform only. */
+@keyframes drain {
+  to {
+    transform: scaleX(0);
+  }
+}
+.drain {
+  animation: drain 10s linear forwards;
 }

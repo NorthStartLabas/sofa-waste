@@ -32,7 +32,7 @@ export function SetPin() {
 
   function onKey(k: string) {
     if (busy) return
-    if (k === '⌫') return setPin((p) => p.slice(0, -1))
+    if (k === 'back') return setPin((p) => p.slice(0, -1))
     const next = (pin + k).slice(0, 4)
     setPin(next)
     if (next.length < 4) return

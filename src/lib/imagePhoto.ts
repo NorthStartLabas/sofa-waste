@@ -21,7 +21,7 @@ const QUALITY = 0.8
 export type PreparedPhoto = {
   full: Blob
   thumb: Blob
-  /** 'image/webp' or 'image/jpeg' — whichever this browser could actually encode. */
+  /** 'image/webp' or 'image/jpeg', whichever this browser could actually encode. */
   type: string
 }
 
