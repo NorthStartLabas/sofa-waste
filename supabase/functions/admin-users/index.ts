@@ -112,7 +112,9 @@ Deno.serve(async (req) => {
       'Je pincode voor SOFA Verspilling',
       pinMail(name, pin, restaurant.name),
     )
-    return json(emailed ? { ok: true, emailed } : { ok: true, emailed, pin })
+    // Bootstrap answers with the PIN even when it was emailed: whoever holds the
+    // one-time secret is the person being set up, and the mail may be quarantined.
+    return json(emailed && !bootstrap ? { ok: true, emailed } : { ok: true, emailed, pin })
   }
 
   if (body.action === 'reset') {
