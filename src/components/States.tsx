@@ -38,7 +38,7 @@ export function Empty({
   children?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-start gap-3 border border-dashed border-line-strong px-6 py-10 lg:items-center lg:text-center">
+    <div className="flex flex-col items-start gap-3 border border-dashed border-line-strong px-6 py-10 lg:px-10 lg:py-12">
       <I size={32} className="text-accent" aria-hidden />
       <p className="font-display text-h3">{title}</p>
       {children}

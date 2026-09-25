@@ -17,6 +17,7 @@ import {
   panel,
   primaryButton,
   quietButton,
+  secondaryButton,
   textarea,
   wide,
 } from '../components/styles'
@@ -45,6 +46,16 @@ export function LogScreen() {
   const [item, setItem] = useState<Item | null>(null)
   const [toast, setToast] = useState<Entry | null>(null)
 
+  // Nothing to pick yet: one full-width message, not half a two-column page.
+  if (!catalog.loading && !catalog.error && !catalog.items.some((i) => !i.archived)) {
+    return (
+      <div className={wide}>
+        <h1 className="text-h2 mt-6 mb-6 lg:mt-12">{t('logTitle')}</h1>
+        <NoItems />
+      </div>
+    )
+  }
+
   return (
     <div className={wide}>
       <div className="lg:mt-12 lg:grid lg:grid-cols-[minmax(0,1fr)_27rem] lg:items-start lg:gap-12">
@@ -66,13 +77,11 @@ export function LogScreen() {
               }}
             />
           ) : (
-            catalog.items.length > 0 && (
-              <div className={`${panel} flex flex-col items-center gap-3 px-8 py-16 text-center`}>
-                <ScalesIcon size={36} className="text-accent" aria-hidden />
-                <p className="font-display text-h3">{t('pickFirst')}</p>
-                <p className="text-ink-muted">{t('pickFirstHelp')}</p>
-              </div>
-            )
+            <div className={`${panel} flex flex-col items-center gap-3 px-8 py-16 text-center`}>
+              <ScalesIcon size={36} className="text-accent" aria-hidden />
+              <p className="font-display text-h3">{t('pickFirst')}</p>
+              <p className="text-ink-muted">{t('pickFirstHelp')}</p>
+            </div>
           )}
         </section>
       </div>
@@ -81,9 +90,29 @@ export function LogScreen() {
   )
 }
 
+function NoItems() {
+  const { t } = useT()
+  const { isChef } = useMember()
+  return (
+    <Empty icon={BooksIcon} title={t('noItemsTitle')}>
+      <p className="max-w-[60ch] text-ink-muted">{isChef ? t('noItemsChef') : t('noItemsCook')}</p>
+      {isChef && (
+        <div className="mt-2 flex flex-wrap gap-3">
+          <Link to="/catalog/new/raw" className={primaryButton}>
+            {t('newProduct')}
+          </Link>
+          <Link to="/catalog/new/prep" className={secondaryButton}>
+            {t('newComponent')}
+          </Link>
+        </div>
+      )}
+    </Empty>
+  )
+}
+
 function ItemPicker({ selected, onPick }: { selected: Item | null; onPick: (i: Item) => void }) {
   const { t } = useT()
-  const { member, isChef } = useMember()
+  const { member } = useMember()
   const { items, stations, loading, error, reload } = useCatalog()
   const [term, setTerm] = useState('')
   const live = useMemo(() => items.filter((i) => !i.archived), [items])
@@ -152,18 +181,6 @@ function ItemPicker({ selected, onPick }: { selected: Item | null; onPick: (i: I
       )}
 
       {loading && <SkeletonRows rows={8} />}
-      {!loading && live.length === 0 && (
-        <div className="mt-6">
-          <Empty icon={BooksIcon} title={t('noItemsTitle')}>
-            <p className="text-ink-muted">{isChef ? t('noItemsChef') : t('noItemsCook')}</p>
-            {isChef && (
-              <Link to="/catalog/new/raw" className={primaryButton}>
-                {t('newProduct')}
-              </Link>
-            )}
-          </Empty>
-        </div>
-      )}
       {term && groups.length === 0 && <p className="mt-6 text-ink-muted">{t('noMatch')}</p>}
 
       {groups.map((g) => (

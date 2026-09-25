@@ -1,6 +1,5 @@
 import {
   admin,
-  APP_URL,
   caller,
   cors,
   escapeHtml,
@@ -9,6 +8,7 @@ import {
   randomPin,
   sendMail,
 } from '../_shared/common.ts'
+import { pinMail } from './pinMail.ts'
 
 /**
  * Creating a person, resetting a PIN and deleting a person: the things that
@@ -172,15 +172,3 @@ Deno.serve(async (req) => {
 
   return json({ error: 'invalid' }, 400)
 })
-
-function pinMail(name: string, pin: string, restaurant: string): string {
-  return `<div style="font-family:Helvetica,Arial,sans-serif;color:#1d1d1b;background:#f6f3ee;padding:32px">
-  <p style="font-family:Georgia,serif;font-size:28px;margin:0 0 24px">SOFA Verspilling</p>
-  <p>Hoi ${escapeHtml(name)},</p>
-  <p>Je hebt een account voor de verspillingsapp van ${escapeHtml(restaurant)}. Je tijdelijke pincode is:</p>
-  <p style="font-size:36px;letter-spacing:.3em;font-weight:600;margin:16px 0">${pin}</p>
-  <p>Open <a href="${APP_URL}" style="color:#3e5140">${APP_URL}</a>, log in met je e-mailadres en deze pincode, en kies daarna je eigen pincode.</p>
-  <hr style="border:0;border-top:1px solid #d6cdbf;margin:24px 0">
-  <p style="color:#5a6968">Hi ${escapeHtml(name)}, your temporary PIN for the ${escapeHtml(restaurant)} waste app is ${pin}. Sign in at the link above with your email and this PIN, then choose your own.</p>
-</div>`
-}

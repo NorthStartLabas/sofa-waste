@@ -1,4 +1,5 @@
-import { admin, APP_URL, cors, escapeHtml, json, sendMail } from '../_shared/common.ts'
+import { admin, cors, json, sendMail } from '../_shared/common.ts'
+import { euro, dutchDate, render } from './render.ts'
 
 /**
  * Monday's email: last week's waste, per restaurant, to its report_emails.
@@ -50,99 +51,4 @@ function lastWeekMonday(timezone: string): string {
   const sinceMonday = (today.getDay() + 6) % 7
   today.setDate(today.getDate() - sinceMonday - 7)
   return today.toLocaleDateString('en-CA')
-}
-
-function euro(n: number | null | undefined): string {
-  if (n == null) return 'onvolledig'
-  return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n)
-}
-
-function dutchDate(iso: string): string {
-  return new Date(`${iso}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })
-}
-
-const REASONS: Record<string, string> = {
-  made_too_much: 'Te veel gemaakt',
-  expired: 'Over datum',
-  spoiled: 'Bedorven',
-  mistake: 'Fout / verbrand',
-  dropped: 'Gevallen',
-  supplier_quality: 'Slechte kwaliteit leverancier',
-  other: 'Anders',
-}
-
-const UNITS: Record<string, string> = { g: 'g', ml: 'ml', pcs: 'st' }
-
-type Row = {
-  name: string
-  unit: string
-  qty: number
-  total: number | null
-  days: number
-  entries: number
-}
-type Report = {
-  week_start: string
-  total: number
-  prev_total: number
-  entries: number
-  incomplete_entries: number
-  covers: number
-  per_cover: number | null
-  by_reason: { reason: string; total: number | null; entries: number }[]
-  by_station: { station: string | null; total: number | null; entries: number }[]
-  top_items: Row[]
-  repeated: Row[]
-  incomplete: { name: string; entries: number }[]
-}
-
-function render(restaurant: string, r: Report): string {
-  const diff = r.total - r.prev_total
-  const change =
-    r.prev_total > 0
-      ? `${diff >= 0 ? '+' : '−'}${euro(Math.abs(diff))} t.o.v. vorige week (${euro(r.prev_total)})`
-      : `vorige week: ${euro(r.prev_total)}`
-  const td = 'padding:6px 0;border-bottom:1px solid #d6cdbf'
-  const table = (rows: string[][]) =>
-    `<table style="width:100%;border-collapse:collapse;font-size:15px">${rows
-      .map(
-        (cells) =>
-          `<tr>${cells
-            .map((c, i) => `<td style="${td}${i > 0 ? ';text-align:right' : ''}">${c}</td>`)
-            .join('')}</tr>`,
-      )
-      .join('')}</table>`
-  const h2 = (t: string) =>
-    `<p style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#5a6968;margin:28px 0 8px">${t}</p>`
-  const qty = (row: Row) => `${Math.round(row.qty)} ${UNITS[row.unit] ?? row.unit}`
-
-  return `<div style="font-family:Helvetica,Arial,sans-serif;color:#1d1d1b;background:#f6f3ee;padding:32px;max-width:640px">
-  <p style="font-family:Georgia,serif;font-size:28px;margin:0">${escapeHtml(restaurant)}</p>
-  <p style="color:#5a6968;margin:4px 0 24px">Verspilling, week van ${dutchDate(r.week_start)}</p>
-  <p style="font-family:Georgia,serif;font-size:44px;margin:0;color:#96461f">${euro(r.total)}</p>
-  <p style="margin:4px 0">${change}</p>
-  <p style="margin:4px 0;color:#5a6968">${r.entries} registraties${
-    r.per_cover != null ? ` · ${euro(r.per_cover)} per cover (${r.covers} covers)` : ''
-  }</p>
-  ${
-    r.repeated.length
-      ? h2('Op 3+ dagen weggegooid (batch te groot?)') +
-        table(r.repeated.map((x) => [escapeHtml(x.name), `${x.days} dagen`, qty(x), euro(x.total)]))
-      : ''
-  }
-  ${h2('Top producten')}${
-    r.top_items.length
-      ? table(r.top_items.map((x) => [escapeHtml(x.name), qty(x), euro(x.total)]))
-      : '<p>Niets met volledige kosten.</p>'
-  }
-  ${h2('Per reden')}${table(r.by_reason.map((x) => [REASONS[x.reason] ?? x.reason, `${x.entries}x`, euro(x.total)]))}
-  ${h2('Per station')}${table(r.by_station.map((x) => [escapeHtml(x.station ?? 'Zonder station'), `${x.entries}x`, euro(x.total)]))}
-  ${
-    r.incomplete.length
-      ? h2('Kosten onvolledig (prijs of batchgewicht ontbreekt)') +
-        table(r.incomplete.map((x) => [escapeHtml(x.name), `${x.entries}x`]))
-      : ''
-  }
-  <p style="margin-top:32px"><a href="${APP_URL}" style="color:#3e5140">Open de app</a></p>
-</div>`
 }

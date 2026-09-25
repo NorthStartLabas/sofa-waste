@@ -36,20 +36,25 @@ type Tab = Kind | 'suppliers'
 export function Catalog() {
   const { t } = useT()
   const outlet = useOutlet()
+  const { items } = useCatalog()
   const [tab, setTab] = useState<Tab>(() => (sessionStorage.getItem('catalog.tab') as Tab) ?? 'raw')
   const pick = (next: Tab) => {
     sessionStorage.setItem('catalog.tab', next)
     setTab(next)
   }
+  // The "pick something" panel only makes sense when there is something to pick.
+  const side = outlet || (tab !== 'suppliers' && items.some((i) => i.kind === tab && !i.archived))
   return (
     <div className={wide}>
       <div className="lg:grid lg:grid-cols-12 lg:items-start lg:gap-12">
-        <div className={`lg:col-span-5 ${outlet ? 'hidden lg:block' : ''}`}>
+        <div
+          className={`${side ? 'lg:col-span-5' : 'lg:col-span-8'} ${outlet ? 'hidden lg:block' : ''}`}
+        >
           <PageHeader title={t('catalog')} />
           <TabsAndList tab={tab} pick={pick} />
         </div>
         <div
-          className={`lg:sticky lg:top-8 lg:col-span-7 lg:mt-12 ${outlet ? '' : 'hidden lg:block'}`}
+          className={`lg:sticky lg:top-8 lg:col-span-7 lg:mt-12 ${outlet ? '' : 'hidden'} ${side ? 'lg:block' : ''}`}
         >
           {outlet ?? (
             <div className={`${panel} flex flex-col items-center gap-3 px-8 py-16 text-center`}>
@@ -93,13 +98,16 @@ function Items({ kind }: { kind: Kind }) {
   const { items, suppliers, loading, error, reload } = useCatalog()
   const [term, setTerm] = useState('')
   const [archived, setArchived] = useState(false)
+  const ofKind = items.filter((i) => i.kind === kind)
+  const none = !loading && !ofKind.some((i) => !i.archived)
+  const hasArchived = ofKind.some((i) => i.archived)
   const shown = items.filter(
     (i) => i.kind === kind && i.archived === archived && (!term || matches(i.name, term)),
   )
 
   return (
     <>
-      <div className="flex gap-2">
+      <div className={`gap-2 ${none && !archived ? 'hidden' : 'flex'}`}>
         <span className="relative flex-1">
           <MagnifyingGlassIcon
             size={20}
@@ -126,14 +134,16 @@ function Items({ kind }: { kind: Kind }) {
         </div>
       )}
       {loading && <SkeletonRows rows={6} tall />}
-      {!loading && !term && !archived && shown.length === 0 && (
-        <div className="mt-6">
-          <Empty icon={BooksIcon} title={kind === 'raw' ? t('noProducts') : t('noComponents')}>
-            <p className="text-ink-muted">
-              {kind === 'raw' ? t('noProductsHelp') : t('noComponentsHelp')}
-            </p>
-          </Empty>
-        </div>
+      {none && !archived && (
+        <Empty icon={BooksIcon} title={kind === 'raw' ? t('noProducts') : t('noComponents')}>
+          <p className="max-w-[60ch] text-ink-muted">
+            {kind === 'raw' ? t('noProductsHelp') : t('noComponentsHelp')}
+          </p>
+          <Link to={`/catalog/new/${kind}`} className={`${primaryButton} mt-2`}>
+            <PlusIcon size={18} weight="bold" aria-hidden />
+            {kind === 'raw' ? t('newProduct') : t('newComponent')}
+          </Link>
+        </Empty>
       )}
       <ul className="mt-4">
         {shown.map((i) => (
@@ -170,13 +180,15 @@ function Items({ kind }: { kind: Kind }) {
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        className={`${quietButton} mt-4`}
-        onClick={() => setArchived(!archived)}
-      >
-        {archived ? t('hideArchived') : t('showArchived')}
-      </button>
+      {hasArchived && (
+        <button
+          type="button"
+          className={`${quietButton} mt-4`}
+          onClick={() => setArchived(!archived)}
+        >
+          {archived ? t('hideArchived') : t('showArchived')}
+        </button>
+      )}
     </>
   )
 }

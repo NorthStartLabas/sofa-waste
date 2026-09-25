@@ -50,6 +50,14 @@ begin
   assert r -> 'by_reason' -> 0 ->> 'reason' = 'made_too_much'
      and (r -> 'by_reason' -> 0 ->> 'total')::numeric = 30, format('by_reason %s', r -> 'by_reason');
   assert r -> 'by_station' -> 0 ->> 'station' = 'garde', format('by_station %s', r -> 'by_station');
+  assert jsonb_array_length(r -> 'by_day') = 7, format('by_day %s', r -> 'by_day');
+  -- Monday: anijsboter 10 + room 5 + room 5 + the 00:30 vis 1.
+  assert (r -> 'by_day' -> 0 ->> 'total')::numeric = 21 and (r -> 'by_day' -> 0 ->> 'entries')::int = 4,
+    format('monday %s', r -> 'by_day' -> 0);
+  -- Thursday: one entry, cost unknown. Counted, not priced.
+  assert (r -> 'by_day' -> 3 ->> 'total')::numeric = 0 and (r -> 'by_day' -> 3 ->> 'entries')::int = 1,
+    format('thursday %s', r -> 'by_day' -> 3);
+  assert (r -> 'by_day' -> 6 ->> 'entries')::int = 0, 'sunday should be an empty day, not missing';
 end $$;
 
 rollback;
