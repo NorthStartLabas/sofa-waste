@@ -1,6 +1,8 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
 export const APP_URL = 'https://northstartlabas.github.io/sofa-waste/'
+/** The ordering app. Same accounts and PINs, so the welcome email names both. */
+export const ORDER_URL = 'https://northstartlabas.github.io/sofa-inventoriy/'
 
 export const cors = {
   'Access-Control-Allow-Origin': '*',

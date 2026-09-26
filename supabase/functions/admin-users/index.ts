@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
 
     const emailed = await sendMail(
       [email],
-      'Je pincode voor SOFA Verspilling',
+      'Je pincode voor de SOFA keuken-apps',
       pinMail(name, pin, restaurant.name),
     )
     // Bootstrap answers with the PIN even when it was emailed: whoever holds the
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
 
     const emailed = await sendMail(
       [member.email],
-      'Je nieuwe pincode voor SOFA Verspilling',
+      'Je nieuwe pincode voor de SOFA keuken-apps',
       pinMail(member.name, pin, restaurant.name),
     )
     return json(emailed ? { ok: true, emailed } : { ok: true, emailed, pin })
